@@ -23,3 +23,9 @@ def get_bin_widths(values, val_min=None, val_max=None):
 
 print(get_bin_widths(np.array([0, 0.06, 0.2, 1.0]), 0, 1)) # cloud, consistent
 print(get_bin_widths(np.array(['-2.3', '-1.0', '+0.0', '+1.0', '+1.7', '+2.0', '+2.3']).astype(float))) # metal, not consistent with the original dx values
+
+def bin_width(i, bin_widths, values):
+    unique_values = np.sort(np.unique(values).astype(float))
+    return np.trim_zeros(np.where(unique_values==values[i], bin_widths, [0]*len(unique_values)))[0]
+
+print(bin_width(5, np.array([1.3, 1.15, 1.0, 0.85, 0.5, 0.3, 0.3]), np.array([-2.3, -2.3, -2.3, -1, -1, -1, -1, 0, 0, 1, 1, 1, 1.7, 1.7, 2, 2, 2, 2.3])))

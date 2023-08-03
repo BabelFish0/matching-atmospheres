@@ -66,20 +66,19 @@ planet_recirc = []
 planet_metal = []
 planet_co = []
 
-for file in full_grid:
-	split_file = os.path.basename(file).split('_')
-	planet_recirc.append(split_file[2])
-	planet_metal.append(split_file[3])
-	planet_co.append(split_file[4])
+# for file in full_grid:
+# 	split_file = os.path.basename(file).split('_')
+# 	planet_recirc.append(split_file[2])
+# 	planet_metal.append(split_file[3])
+# 	planet_co.append(split_file[4])
 
-planet_recirc = np.sort(np.unique(planet_recirc).astype(float))
-planet_metal = np.sort(np.unique(planet_metal).astype(float))
-#planet_metal = np.array([planet_metal[-1],planet_metal[-2],planet_metal[0],planet_metal[1],planet_metal[2],planet_metal[3],planet_metal[4]])
-planet_co = np.sort(np.unique(planet_co).astype(float))
+# planet_recirc = np.sort(np.unique(planet_recirc).astype(float))
+# planet_metal = np.sort(np.unique(planet_metal).astype(float))
+# planet_co = np.sort(np.unique(planet_co).astype(float))
 
-print(planet_recirc)
-print(planet_metal)
-print(planet_co)
+# print(planet_recirc)
+# print(planet_metal)
+# print(planet_co)
 
 # --- dx values ---
 # planet_recirc_dx = np.array([150,150,150,150,150])
@@ -109,93 +108,130 @@ def get_bin_widths(values, val_min=None, val_max=None): #JY Added general func f
     dx_values = midpoints[1:] - midpoints[:-1]
     return dx_values
 
-planet_recirc_dx = get_bin_widths(planet_recirc)
-planet_metal_dx = get_bin_widths(planet_metal)
-planet_co_dx = get_bin_widths(planet_co)
+def bin_width(i, bin_widths, values):
+	unique_values = np.sort(np.unique(values).astype(float))
+	return np.trim_zeros(np.where(unique_values==values[i], bin_widths, [0]*len(unique_values)))[0]
+
+# planet_recirc_dx = get_bin_widths(planet_recirc)
+# planet_metal_dx = get_bin_widths(planet_metal)
+# planet_co_dx = get_bin_widths(planet_co)
+
+# print(planet_recirc_dx, planet_metal_dx, planet_co_dx)
+
+# Read in a single model to record the length
+# grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[0])+'_'+str(planet_metal[0])+'_'+str(planet_co[0])+'_model.txt.gz')
+# print(grid_point)
+
+
+# model = np.loadtxt(grid_point, dtype=float)
+# nmodel = len(model[:,0])
+
+# nrecirc = len(planet_recirc)
+# nmetal = len(planet_metal)
+# nco = len(planet_co)
+
+# planet_model = np.empty((nrecirc,nmetal,nco,nmodel), dtype=float)
+# planet_model_wav = np.empty((nrecirc,nmetal,nco,nmodel), dtype=float)
+# planet_bin_model = np.empty((nrecirc,nmetal,nco,ntransmission), dtype=float)
+# model_chi = np.empty((nrecirc,nmetal,nco), dtype=float)
+# model_alt = np.empty((nrecirc,nmetal,nco), dtype=float)
+
+model_chi = np.array([])
+model_alt = np.array([])
+
+filenum=0
+for model_file in full_grid:
+	split_file = os.path.basename(model_file).split('_')
+	planet_recirc.append(split_file[2])
+	planet_metal.append(split_file[3])
+	planet_co.append(split_file[4])
+	print('--------------------------------------|', filenum)
+	
+	print(' Recirc= ', planet_recirc[-1], '[M/H]= ', planet_metal[-1], ', C/O= ', planet_co[-1])
+
+	grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+planet_recirc[-1]+'_'+planet_metal[-1]+'_'+planet_co[-1]+'_model.txt.gz')
+
+	model = np.loadtxt(grid_point, dtype=float)
+	planet_model_wav = model[:,0]
+	planet_model = model[:,1]
+
+	# Temp arrays for binning
+	mod_wav = model[:,0]
+	mod_depth = model[:,1]
+	# now need to bin the model to the transmission spectrum of the planet
+	planet_bin_model = []
+	for i in range(0, ntransmission):
+		bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))# [0] <- JY removed [0], maybe not necessary due to normalisation later??
+		planet_bin_model.append(np.mean(mod_depth[bin_range]))
+
+	# Temp array for use in function
+	model_binned = np.array(planet_bin_model)
+
+	p0 = [0.01]
+	model_fit_info = opt.minimize(model_to_data, p0, (data_depth, data_deptherr, model_binned), method='L-BFGS-B')
+	model_alt = np.append(model_alt, model_fit_info.x[0])
+	model_chi = np.append(model_chi, model_fit_info.fun)
+
+	filenum += 1
+
+planet_recirc = np.array(planet_recirc).astype(float)
+planet_metal = np.array(planet_metal).astype(float)
+planet_co = np.array(planet_co).astype(float)
+planet_recirc_dx = get_bin_widths(np.sort(np.unique(planet_recirc)))
+planet_metal_dx = get_bin_widths(np.sort(np.unique(planet_metal)))
+planet_co_dx = get_bin_widths(np.sort(np.unique(planet_co)))
 
 print(planet_recirc_dx, planet_metal_dx, planet_co_dx)
 
-# Read in a single model to record the length
-grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[0])+'_'+str(planet_metal[0])+'_'+str(planet_co[0])+'_model.txt.gz')
-print(grid_point)
+# for recirc in range(0, nrecirc): 
+# 	for metal in range(0, nmetal):
+# 		for co in range(0, nco):
+# 			print('--------------------------------------')
+# 			print(recirc, metal, co)
+# 			print(' Recirc= ', planet_recirc, '[M/H]= ', planet_metal[metal], ', C/O= ', planet_co[co])
 
+# 			# trans-iso_WASP-17_1455.0_-1.0_0.15_0010_0.00_model.txt.gz
+# 			grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[recirc])+'_'+str(planet_metal[metal])+'_'+str(planet_co[co])+'_model.txt.gz')
 
-model = np.loadtxt(grid_point, dtype=float)
-nmodel = len(model[:,0])
+# 			model = np.loadtxt(grid_point, dtype=float)
+# 			planet_model_wav[recirc, metal, co, :] = model[:,0]
+# 			planet_model[recirc, metal, co, :] = model[:,1]
 
-nrecirc = len(planet_recirc)
-nmetal = len(planet_metal)
-nco = len(planet_co)
+# 			# Temp arrays for binning
+# 			mod_wav = model[:,0]
+# 			mod_depth = model[:,1]
+# 			# now need to bin the model to the transmission spectrum of the planet
+# 			for i in range(0, ntransmission):
+# 				# bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))[0] <- JY removed [0], maybe not necessary due to normalisation later??
+# 				bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))
+# 				planet_bin_model[recirc, metal, co, i] = np.mean(mod_depth[bin_range])
 
-planet_model = np.empty((nrecirc,nmetal,nco,nmodel), dtype=float)
-planet_model_wav = np.empty((nrecirc,nmetal,nco,nmodel), dtype=float)
-planet_bin_model = np.empty((nrecirc,nmetal,nco,ntransmission), dtype=float)
-model_chi = np.empty((nrecirc,nmetal,nco), dtype=float)
-model_alt = np.empty((nrecirc,nmetal,nco), dtype=float)
+# 			# Temp array for use in function
+# 			model_binned = planet_bin_model[recirc, metal, co, :]
 
-for recirc in range(0, nrecirc): 
-	for metal in range(0, nmetal):
-		for co in range(0, nco):
-			print('--------------------------------------')
-			print(recirc, metal, co)
-			print(' Recirc= ', planet_recirc, '[M/H]= ', planet_metal[metal], ', C/O= ', planet_co[co])
+# 			p0 = [0.01]
+# 			model_fit_info = opt.minimize(model_to_data, p0, (data_depth, data_deptherr, model_binned), method='L-BFGS-B')
 
-			# trans-iso_WASP-17_1455.0_-1.0_0.15_0010_0.00_model.txt.gz
-			grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[recirc])+'_'+str(planet_metal[metal])+'_'+str(planet_co[co])+'_model.txt.gz')
-
-			model = np.loadtxt(grid_point, dtype=float)
-			planet_model_wav[recirc, metal, co, :] = model[:,0]
-			planet_model[recirc, metal, co, :] = model[:,1]
-
-			# Temp arrays for binning
-			mod_wav = model[:,0]
-			mod_depth = model[:,1]
-			# now need to bin the model to the transmission spectrum of the planet
-			for i in range(0, ntransmission):
-				# bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))[0] <- JY removed [0], maybe not necessary due to normalisation later??
-				bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))
-				planet_bin_model[recirc, metal, co, i] = np.mean(mod_depth[bin_range])
-
-			# Temp array for use in function
-			model_binned = planet_bin_model[recirc, metal, co, :]
-
-			p0 = [0.01]
-			model_fit_info = opt.minimize(model_to_data, p0, (data_depth, data_deptherr, model_binned), method='L-BFGS-B')
-
-			model_alt[recirc,metal,co] = model_fit_info.x[0]
-			model_chi[recirc,metal,co] = model_fit_info.fun
+# 			model_alt[recirc,metal,co] = model_fit_info.x[0]
+# 			model_chi[recirc,metal,co] = model_fit_info.fun
 
 print('--------------------------------------')
+#print(model_chi)
 max_liklihood = np.amax(model_chi * (-0.5))
 
 a = 0
-for recirc in range(0, nrecirc):
-	for metal in range(0, nmetal):
-		for co in range(0, nco):
+for i, chi in np.ndenumerate(model_chi):
+	i=i[0]
+	model_evidence = - (chi / 2.0)
+	beta_value = model_evidence - max_liklihood
+	tot_evidence = np.exp(beta_value) * bin_width(i, planet_recirc_dx, planet_recirc) * bin_width(i, planet_metal_dx, planet_metal) * bin_width(i, planet_co_dx, planet_co)
+	a += tot_evidence
 
-			model_evidence = - (model_chi[recirc,metal,co] / 2.0)
-
-			beta_value = model_evidence - max_liklihood
-
-			tot_evidence = np.exp(beta_value) * planet_recirc_dx[recirc] * planet_metal_dx[metal] * planet_co_dx[co]
-
-			a = a + tot_evidence
-
-print, a 
+print(a)
 log_norm_grid = np.log10(a) + max_liklihood
-
-norm_prob_density = np.empty([nrecirc,nmetal,nco], dtype=float)
-norm_prob = np.empty([nrecirc,nmetal,nco])
-
-for recirc in range(0, nrecirc):
-	for metal in range(0, nmetal):
-		for co in range(0, nco):
-					
-			norm_prob_density[recirc,metal,co] = np.exp(-0.5 * model_chi[recirc,metal,co] - log_norm_grid)
-
-			norm_prob[recirc,metal,co] = norm_prob_density[recirc,metal,co] * planet_recirc_dx[recirc] * planet_metal_dx[metal] * planet_co_dx[co]
-
-
+				
+norm_prob_density = [np.exp(-0.5 * chi - log_norm_grid) for chi in model_chi]
+norm_prob = [norm_prob_density[i] * bin_width(i, planet_recirc_dx, planet_recirc) * bin_width(i, planet_metal_dx, planet_metal) * bin_width(i, planet_co_dx, planet_co) for i in range(len(norm_prob_density))]
 
 print(np.amin(norm_prob_density), np.amax(norm_prob_density))
 print(np.sum(norm_prob))
