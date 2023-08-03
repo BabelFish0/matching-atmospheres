@@ -57,8 +57,6 @@ planet_name = 'HD-209458'
 model_files_loc = os.path.join(grid_folder,planet_name)
 full_grid = glob.glob(model_files_loc+'/*.txt.gz')
 print('grid loc: ', model_files_loc)
-ngrid = len(full_grid)
-print(ngrid)
 
 # For JY reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
 planet_recirc = []
@@ -137,6 +135,8 @@ planet_co_dx = get_bin_widths(np.sort(np.unique(planet_co)))
 
 print(planet_recirc_dx, planet_metal_dx, planet_co_dx)
 
+# --- probabilites --- JY 3/8/23 how do dx values change when they are sampled in irregular intervals?
+
 print('--------------------------------------')
 max_liklihood = np.amax(model_chi * (-0.5))
 
@@ -154,19 +154,11 @@ log_norm_grid = np.log10(a) + max_liklihood
 norm_prob_density = [np.exp(-0.5 * chi - log_norm_grid) for chi in model_chi]
 norm_prob = [norm_prob_density[i] * bin_width(i, planet_recirc_dx, planet_recirc) * bin_width(i, planet_metal_dx, planet_metal) * bin_width(i, planet_co_dx, planet_co) for i in range(len(norm_prob_density))]
 
-print(np.amin(norm_prob_density), np.amax(norm_prob_density))
+min_index = np.argmin(norm_prob_density)
+max_index = np.argmax(norm_prob_density)
+print('MIN: Recirc=', planet_recirc[min_index], ' Metal=', planet_metal[min_index], ' CO=', planet_co[min_index], np.amin(norm_prob_density), '\nMAX: Recirc=', planet_recirc[max_index], ' Metal=', planet_metal[max_index], ' CO=', planet_co[max_index], np.amax(norm_prob_density))
 print(np.sum(norm_prob))
 
 filename = 'test.npz'
 
 np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, planet_model=planet_model, planet_model_wav=planet_model_wav, planet_bin_model=planet_bin_model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density)
-
-
-
-
-
-
-
-
-
-
