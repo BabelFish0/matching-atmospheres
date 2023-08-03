@@ -56,8 +56,9 @@ planet_name = 'HD-209458'
 
 model_files_loc = os.path.join(grid_folder,planet_name)
 full_grid = glob.glob(model_files_loc+'/*.txt.gz')
-print(model_files_loc)
+print('grid loc: ', model_files_loc)
 ngrid = len(full_grid)
+print(ngrid)
 
 # trans-iso_WASP-17_1455.0_-1.0_0.15_0001_0.00_model.txt.gz
 # For JY reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
@@ -71,10 +72,10 @@ for file in full_grid:
 	planet_metal.append(split_file[3])
 	planet_co.append(split_file[4])
 
-planet_recirc = np.unique(planet_recirc)
-planet_metal = np.unique(planet_metal)
+planet_recirc = np.sort(np.unique(planet_recirc).astype(float))
+planet_metal = np.sort(np.unique(planet_metal).astype(float))
 #planet_metal = np.array([planet_metal[-1],planet_metal[-2],planet_metal[0],planet_metal[1],planet_metal[2],planet_metal[3],planet_metal[4]])
-planet_co = np.unique(planet_co)
+planet_co = np.sort(np.unique(planet_co).astype(float))
 
 print(planet_recirc)
 print(planet_metal)
@@ -108,14 +109,14 @@ def get_bin_widths(values, val_min=None, val_max=None): #JY Added general func f
     dx_values = midpoints[1:] - midpoints[:-1]
     return dx_values
 
-planet_recirc_dx = get_bin_widths(planet_recirc.astype(float))
-planet_metal_dx = get_bin_widths(planet_metal.astype(float))
-planet_co_dx = get_bin_widths(planet_co.astype(float))
+planet_recirc_dx = get_bin_widths(planet_recirc)
+planet_metal_dx = get_bin_widths(planet_metal)
+planet_co_dx = get_bin_widths(planet_co)
 
 print(planet_recirc_dx, planet_metal_dx, planet_co_dx)
 
 # Read in a single model to record the length
-grid_point = os.path.join(model_files_loc,'pt-eqpt_'+planet_name+'_'+planet_recirc[0]+'_'+planet_metal[0]+'_'+planet_co[0]+'_model.txt.gz')
+grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[0])+'_'+str(planet_metal[0])+'_'+str(planet_co[0])+'_model.txt.gz')
 print(grid_point)
 
 
@@ -140,7 +141,7 @@ for recirc in range(0, nrecirc):
 			print(' Recirc= ', planet_recirc, '[M/H]= ', planet_metal[metal], ', C/O= ', planet_co[co])
 
 			# trans-iso_WASP-17_1455.0_-1.0_0.15_0010_0.00_model.txt.gz
-			grid_point = os.path.join(model_files_loc,'trans-iso_'+planet_name+'_'+planet_recirc[recirc]+'_'+planet_metal[metal]+'_'+planet_co[co]+'_model.txt.gz')
+			grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+str(planet_recirc[recirc])+'_'+str(planet_metal[metal])+'_'+str(planet_co[co])+'_model.txt.gz')
 
 			model = np.loadtxt(grid_point, dtype=float)
 			planet_model_wav[recirc, metal, co, :] = model[:,0]
