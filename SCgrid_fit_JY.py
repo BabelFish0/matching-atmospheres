@@ -1,6 +1,6 @@
-# PSgrid_fit.py
-# Goyal Planet Specific Grid fit
-#  Written by H.R. Wakeford
+# SCgrid_fit.py
+# Goyal Self Consistent Grid fit
+# Written by J. Young based on PSgrid_fit.py by H. R. Wakeford.
 # email: stellarplanet@gmail.com
 
 import os
@@ -17,27 +17,15 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.gridspec as grid
 
-
-def model_to_data(p0, data, data_err, model):
-	model_fit = model + p0[0]
-
-	return np.sum((model_fit-data)**2/data_err**2)
-
-def find_nearest(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return idx
-
-
 '''
 What needs to be read in 
 data file name and location (data needs to be in rp/rs^2 and microns)
 name of the planet in the format used in the model grid files
 location of the planet specific grid files
 output folder location
-
 '''
-# Set up the data
+
+# --- set up the data ---
 data_file = '/Users/jude/Documents/School/Upper_School/Summer23/matching-atmospheres/HD209458b_transmission_Sing2016.txt'
 data = np.loadtxt(data_file, dtype=float, comments='#')
 data_wav = data[:,0]
@@ -58,12 +46,24 @@ model_files_loc = os.path.join(grid_folder,planet_name)
 full_grid = glob.glob(model_files_loc+'/*.txt.gz')
 print('grid loc: ', model_files_loc)
 
-# For JY reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
-planet_recirc = []
-planet_metal = []
-planet_co = []
+def model_to_data(p0, data, data_err, model):
+	'''
+	This function is used to minimise systematic error in the observation.
 
-def get_bin_widths(values, val_min=None, val_max=None): #JY Added general func for above
+	-----
+	Return the quality of fit between the model transit depths and the observed transit depths.
+
+	`p0` is a constant added to the model values. The optimiser calls this function to find the `p0` that minimises the fit error.
+	'''
+	model_fit = model + p0[0]
+	return np.sum((model_fit-data)**2/data_err**2)
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+def get_bin_widths(values, val_min=None, val_max=None):
     '''
     Find the difference between the midpoints of each consecutive value in `values`. If no upper or lower bound is given, the midpoint between element 0 and 1 will be assumed symmetrical. This is also true for element -1 and -2.
 
@@ -85,11 +85,22 @@ def get_bin_widths(values, val_min=None, val_max=None): #JY Added general func f
     return dx_values
 
 def bin_width(i, bin_widths, values):
+	'''Match a model parameter value to the correct dx value which has been produced by `get_bin_widths()`'''
 	unique_values = np.sort(np.unique(values).astype(float))
 	return np.trim_zeros(np.where(unique_values==values[i], bin_widths, [0]*len(unique_values)))[0]
 
+# For JY reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
+planet_recirc = []
+planet_metal = []
+planet_co = []
 model_chi = np.array([])
 model_alt = np.array([])
+
+
+
+'''
+Iterate through every file in the grid. Record the model parameters and compare it to the observed data file. Record the fit data.
+'''
 
 filenum=0
 for model_file in full_grid:
@@ -99,15 +110,15 @@ for model_file in full_grid:
 	planet_co.append(split_file[4])
 	print('--------------------------------------|', filenum)
 	
-	print(' Recirc= ', planet_recirc[-1], '[M/H]= ', planet_metal[-1], ', C/O= ', planet_co[-1])
+	print('Recirc= ', planet_recirc[-1], 'M/H= ', planet_metal[-1], ' C/O= ', planet_co[-1])
 
-	grid_point = os.path.join(model_files_loc,'trans-eqpt_'+planet_name+'_'+planet_recirc[-1]+'_'+planet_metal[-1]+'_'+planet_co[-1]+'_model.txt.gz')
+	grid_point = os.path.join(model_files_loc, f'trans-eqpt_{planet_name}_{planet_recirc[-1]}_{planet_metal[-1]}_{planet_co[-1]}_model.txt.gz')
 
 	model = np.loadtxt(grid_point, dtype=float)
 	planet_model_wav = model[:,0]
 	planet_model = model[:,1]
 
-	# Temp arrays for binning
+	# temp arrays for binning
 	mod_wav = model[:,0]
 	mod_depth = model[:,1]
 	# now need to bin the model to the transmission spectrum of the planet
@@ -129,14 +140,13 @@ for model_file in full_grid:
 planet_recirc = np.array(planet_recirc).astype(float)
 planet_metal = np.array(planet_metal).astype(float)
 planet_co = np.array(planet_co).astype(float)
-planet_recirc_dx = get_bin_widths(np.sort(np.unique(planet_recirc)))
+planet_recirc_dx = get_bin_widths(np.sort(np.unique(planet_recirc))) #find dx values for the model parameters using get_bin_widths
 planet_metal_dx = get_bin_widths(np.sort(np.unique(planet_metal)))
 planet_co_dx = get_bin_widths(np.sort(np.unique(planet_co)))
 
-print(planet_recirc_dx, planet_metal_dx, planet_co_dx)
+#print("dx values: ", planet_recirc_dx, planet_metal_dx, planet_co_dx)
 
-# --- probabilites --- JY 3/8/23 how do dx values change when they are sampled in irregular intervals?
-
+# --- probabilites --- 
 print('--------------------------------------')
 max_liklihood = np.amax(model_chi * (-0.5))
 
@@ -148,7 +158,7 @@ for i, chi in np.ndenumerate(model_chi):
 	tot_evidence = np.exp(beta_value) * bin_width(i, planet_recirc_dx, planet_recirc) * bin_width(i, planet_metal_dx, planet_metal) * bin_width(i, planet_co_dx, planet_co)
 	a += tot_evidence
 
-print(a)
+#print(a)
 log_norm_grid = np.log10(a) + max_liklihood
 				
 norm_prob_density = [np.exp(-0.5 * chi - log_norm_grid) for chi in model_chi]
@@ -156,9 +166,30 @@ norm_prob = [norm_prob_density[i] * bin_width(i, planet_recirc_dx, planet_recirc
 
 min_index = np.argmin(norm_prob_density)
 max_index = np.argmax(norm_prob_density)
-print('MIN: Recirc=', planet_recirc[min_index], ' Metal=', planet_metal[min_index], ' CO=', planet_co[min_index], np.amin(norm_prob_density), '\nMAX: Recirc=', planet_recirc[max_index], ' Metal=', planet_metal[max_index], ' CO=', planet_co[max_index], np.amax(norm_prob_density))
+print('MIN: Recirc=', planet_recirc[min_index], ' M/H=', planet_metal[min_index], ' C/O=', planet_co[min_index], np.amin(norm_prob_density), '\nMAX: Recirc=', planet_recirc[max_index], ' M/H=', planet_metal[max_index], ' C/O=', planet_co[max_index], np.amax(norm_prob_density))
 print(np.sum(norm_prob))
 
+# --- plot & save ---
+# Find file corresponding to max(norm_prob_density)
+grid_point = os.path.join(model_files_loc, f'trans-eqpt_{planet_name}_{planet_recirc[max_index]:.2f}_{planet_metal[max_index]:.1f}_{planet_co[max_index]:.2f}_model.txt.gz')
+model = np.loadtxt(grid_point, dtype=float) 
+model_wavelengths = model[:,0]
+model_transit_depths = model[:,1]
+
+fig, ax = plt.subplots(figsize=(14, 4))
+
+plt.errorbar(data_wav, data_depth, xerr=data_waverr, yerr=data_deptherr, ls='None')
+plt.xlim(0.3,5.1)
+plt.plot(model_wavelengths,np.array(model_transit_depths)+model_alt[max_index])
+plt.xscale('log')
+
+plt.xlabel('Wavelength')
+plt.ylabel('Transit Depth')
+plt.legend([f'trans-eqpt_{planet_name}_{planet_recirc[max_index]:.2f}_{planet_metal[max_index]:.1f}_{planet_co[max_index]:.2f}_model.txt.gz', 'observed'])
+plt.title(planet_name, loc='left', weight='bold')
+plt.show()
+
+# --- junk for now v ---
 filename = 'test.npz'
 
 np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, planet_model=planet_model, planet_model_wav=planet_model_wav, planet_bin_model=planet_bin_model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density)
