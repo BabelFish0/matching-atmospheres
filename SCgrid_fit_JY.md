@@ -8,7 +8,7 @@ In each of the grids, a large number of models are generated from a set of varyi
 - Iterate through all the files in the folder of models. Record the filenames.
 - The filenames have a specific nomenclature, so the model parameters are written in order separated by underscores. This means the program can extract all the different parameters from every file, leaving it with 5 lists of values used in the model.
 - Given that the assumption that every combination of parameters is used is true, the code can safely iterate through these lists and reconstruct the filename.
-- It then uses `scipy.optimize()` to minimise systematic error and determine $\chi^2$ for each model.
+- It then uses `scipy.optimize.minimize()` to minimise systematic error and determine $\chi^2$ for each model.
 - From this it determines the probability density function.
 
 However, in the Self Consistent Grid not every combination of model parameters is used. Also, there are now only 3 parameters. This is illustrated here in the beginning of [HD-209458's grid](/testgrid_sc/HD-209458/):
@@ -55,3 +55,7 @@ One area where the PS Grid fit was not user friendly was the calculation the dx 
 In PS Grid fit this was manually entered as 5 arrays, each containing the same number of elements as there were values for each parameter.
 
 Now this is automated by the [`get_bin_widths()`](https://github.com/BabelFish0/matching-atmospheres/blob/42eb49466befba93493221d481f88201b8165c71/SCgrid_fit_JY.py#L66-L85) function. This uses NumPy arrays to neatly find the midpoints and also clip the top and bottom if needed. This has [its own testing file](/tools/dx_finder.py) for trying out numbers.
+
+## Demo Output
+
+![HD-209458](/figures/sc_demo.png)
