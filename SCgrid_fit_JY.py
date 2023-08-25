@@ -192,11 +192,10 @@ ax.xaxis.set_major_locator(majorLocator)
 ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
 plt.xlabel('Wavelength ($\mu$m)')
 plt.ylabel('Transit Depth')
-plt.legend([f'{num_likely} additional models within $\Delta\chi^2$ {delta_chi2_max}', f'trans-eqpt_{planet_name}_{planet_recirc[max_index]:.2f}_{planet_metal[max_index]:+.1f}_{planet_co[max_index]:.2f}_model.txt.gz', 'observed'])
+plt.legend([f'{num_likely} additional models within $\Delta\chi^2$ {delta_chi2_max}', f'trans-eqpt_{planet_name}_{planet_recirc[max_index]:.2f}_{planet_metal[max_index]:+.1f}_{planet_co[max_index]:.2f}_model.txt.gz\n$\chi^2=${model_chi[max_index]:.3g}', 'observed'], fancybox=False)
 plt.title(planet_name, loc='left', weight='bold')
 plt.show()
 
-# --- junk for now v ---
-filename = 'test.npz'
-
-np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, planet_model=planet_model, planet_model_wav=planet_model_wav, planet_bin_model=planet_bin_model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density)
+# --- store relevant arrays ---
+filename = 'sc_grid_fit.npz'
+np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, best_model = model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density)
