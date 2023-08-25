@@ -82,15 +82,14 @@ def bin_width(i, bin_widths, values):
 	unique_values = np.sort(np.unique(values).astype(float))
 	return np.trim_zeros(np.where(unique_values==values[i], bin_widths, [0]*len(unique_values)))[0]
 
-# For JY reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
+# For reference -> pt-eqpt_PlanetName_Recirculationfactor_log(Metallicity)_C/ORatio_model.txt.gz
 planet_recirc = []
 planet_metal = []
 planet_co = []
 model_chi = np.array([])
 '''chi squared'''
 model_alt = np.array([])
-'''added constant'''
-
+'''added constant for each model'''
 
 '''
 Iterate through every file in the grid. Record the model parameters and compare it to the observed data file. Record the fit data.
@@ -99,7 +98,7 @@ Iterate through every file in the grid. Record the model parameters and compare 
 filenum=0
 for model_file in full_grid:
 	split_file = os.path.basename(model_file).split('_')
-	planet_recirc.append(split_file[2])
+	planet_recirc.append(split_file[2]) # record model params
 	planet_metal.append(split_file[3])
 	planet_co.append(split_file[4])
 	print('--------------------------------------|', filenum)
@@ -113,16 +112,14 @@ for model_file in full_grid:
 	mod_wav = model[:,0]
 	mod_depth = model[:,1]
 	# now need to bin the model to the transmission spectrum of the planet
-	planet_bin_model = []
+	model_binned = []
 	for i in range(0, ntransmission):
-		bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))# [0] <- JY removed [0], maybe not necessary due to normalisation later??
-		planet_bin_model.append(np.mean(mod_depth[bin_range]))
-
-	# Temp array for use in function
-	model_binned = np.array(planet_bin_model)
+		bin_range = np.where((mod_wav < wav_high[i]) & (mod_wav > wav_low[i]))
+		model_binned.append(np.mean(mod_depth[bin_range]))
+	model_binned = np.array(model_binned)
 
 	p0 = [0.01]
-	model_fit_info = opt.minimize(model_to_data, p0, (data_depth, data_deptherr, model_binned), method='L-BFGS-B')
+	model_fit_info = opt.minimize(model_to_data, p0, (data_depth, data_deptherr, model_binned), method='L-BFGS-B') # minimise systematic error
 	model_alt = np.append(model_alt, model_fit_info.x[0])
 	model_chi = np.append(model_chi, model_fit_info.fun)
 
@@ -134,7 +131,6 @@ planet_co = np.array(planet_co).astype(float)
 planet_recirc_dx = get_bin_widths(np.sort(np.unique(planet_recirc))) #find dx values for the model parameters using get_bin_widths
 planet_metal_dx = get_bin_widths(np.sort(np.unique(planet_metal)))
 planet_co_dx = get_bin_widths(np.sort(np.unique(planet_co)))
-print(np.unique(planet_metal))
 #print("dx values: ", planet_recirc_dx, planet_metal_dx, planet_co_dx)
 
 # --- probabilites --- 
@@ -162,17 +158,19 @@ print(np.sum(norm_prob))
 
 # --- plot & save ---
 
-# find models >=0.1 confidence
+# find models >= confidence
 delta_chi2_max = 100
+'''maximum allowed delta chi squared for displayed models on graph'''
 likely_models = np.array([[], []])
+'''array of wavelengths (to be safe) and transit depths for the models satisfying the above'''
 num_likely=-1
-for i in np.where(model_chi - np.amin(model_chi)<=delta_chi2_max)[0]:
+for i in np.where(model_chi - np.amin(model_chi)<=delta_chi2_max)[0]: # find indecies corresponding to models within the allowed delta chi^2
 	num_likely += 1
 	grid_point = os.path.join(model_files_loc, f'trans-eqpt_{planet_name}_{planet_recirc[i]:.2f}_{planet_metal[i]:+.1f}_{planet_co[i]:.2f}_model.txt.gz')
 	model = np.loadtxt(grid_point, dtype=float)
-	likely_models = np.append(likely_models, [model[:,0], model[:,1]+model_alt[i]], axis=1)
+	likely_models = np.append(likely_models, [model[:,0], model[:,1]+model_alt[i]], axis=1) # load the models' data to one array, shape (2, len(model[:,0])*(num_likely)+1)
 	
-# Find file corresponding to max(norm_prob_density)
+# Find file corresponding to max(norm_prob_density) - this is separate for simplicity (if the above is not used)
 grid_point = os.path.join(model_files_loc, f'trans-eqpt_{planet_name}_{planet_recirc[max_index]:.2f}_{planet_metal[max_index]:+.1f}_{planet_co[max_index]:.2f}_model.txt.gz')
 model = np.loadtxt(grid_point, dtype=float) 
 model_wavelengths = model[:,0]
@@ -180,14 +178,14 @@ model_transit_depths = model[:,1]
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
-plt.plot(likely_models[0,:], likely_models[1,:], color='C7', lw=0.5)
-plt.plot(model_wavelengths,np.array(model_transit_depths)+model_alt[max_index], color='C1')
-plt.errorbar(data_wav, data_depth, xerr=data_waverr, yerr=data_deptherr, ls='None', color='C0')
+plt.plot(likely_models[0,:], likely_models[1,:], color='C7', lw=0.5) # next best models
+plt.plot(model_wavelengths,np.array(model_transit_depths)+model_alt[max_index], color='C1') # best model
+plt.errorbar(data_wav, data_depth, xerr=data_waverr, yerr=data_deptherr, ls='None', color='C0') # observed
 
 plt.xlim(0.3,5.1)
 plt.subplots_adjust(left=0.2, bottom=0.2)
 plt.xscale('log')
-majorLocator = matplotlib.pyplot.FixedLocator([0.2,0.6,1.0,1.4,2,3,5,8,12])
+majorLocator = matplotlib.pyplot.FixedLocator([0.2,0.6,1.0,1.4,2,3,5,8,12]) # x ticks
 ax.xaxis.set_major_locator(majorLocator)
 ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
 plt.xlabel('Wavelength ($\mu$m)')
@@ -198,4 +196,4 @@ plt.show()
 
 # --- store relevant arrays ---
 filename = 'sc_grid_fit.npz'
-np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, best_model = model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density)
+np.savez(filename, model_chi=model_chi, model_alt=model_alt, planet_co=planet_co, planet_metal=planet_metal, planet_recirc=planet_recirc, planet_co_dx=planet_co_dx, planet_metal_dx=planet_metal_dx, planet_recirc_dx=planet_recirc_dx, best_model = model, data_wav=data_wav, data_waverr=data_waverr, data_depth=data_depth, data_deptherr=data_deptherr, norm_prob=norm_prob, norm_prob_density=norm_prob_density) # only stores best model data but keeps fit data for all
