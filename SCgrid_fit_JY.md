@@ -26,9 +26,9 @@ However, in the Self Consistent Grid not every combination of model parameters i
 |0.25|1.0|0.35|
 |...|...|...|
 
-Therefore, the method that [Self Consistent Grid fit](/SCgrid_fit_JY.py) must differ from the Planet Specific Grid fit program. In PS Grid fit, arrays are initilised before the loop runs for storing the data and $\chi^2$ values. In these arrays there is an axis for each parameter. If this same approach is used for the SC Grid it would end up with many blank spaces and would be confusing and cumbersome.
+Therefore, the method that [Self Consistent Grid fit](SCgrid_fit_JY.py) must differ from the Planet Specific Grid fit program. In PS Grid fit, arrays are initilised before the loop runs for storing the data and $\chi^2$ values. In these arrays there is an axis for each parameter. If this same approach is used for the SC Grid it would end up with many blank spaces and would be confusing and cumbersome.
 
-Instead, [Self Consistent Grid fit](/SCgrid_fit_JY.py) determines $\chi^2$ as it iterates through the files for the first time and then later deals with the parameters from the model filenames. This is an overview of the approach:
+Instead, [Self Consistent Grid fit](SCgrid_fit_JY.py) determines $\chi^2$ as it iterates through the files for the first time and then later deals with the parameters from the model filenames. This is an overview of the approach:
 
 - Iterate through all the files in the folder of models. Extract the parameters as before. Find $\chi^2$ within this loop. All the relevant details are appended to arrays.
 
