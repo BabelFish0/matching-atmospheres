@@ -3,7 +3,7 @@
 
 ## Main Change: Grid Organisation
 
-In each of the grids, a large number of models are generated from a set of varying parameters. In the Planet Specific Grid, there were 5 parameters, each witha few values they could take. Every combination of values had a model. Thus, the approach of the Planet Specific Grid fit was as follows:
+In each of the grids, a large number of models are generated from a set of varying parameters. In the Planet Specific Grid, there were 5 parameters, each with a few values they could take. Every combination of values had a model. Thus, the approach of the Planet Specific Grid fit was as follows:
 
 - Iterate through all the files in the folder of models. Record the filenames.
 - The filenames have a specific nomenclature, so the model parameters are written in order separated by underscores. This means the program can extract all the different parameters from every file, leaving it with 5 lists of values used in the model.
@@ -26,7 +26,7 @@ However, in the Self Consistent Grid not every combination of model parameters i
 |0.25|1.0|0.35|
 |...|...|...|
 
-Therefore, the method that [Self Consistent Grid fit](/SCgrid_fit_JY.py) must differ from the Planet Specific Grid fit program. In PS Grid fit, arrays are initilised before the loop runs for storing the data and $\chi^2$ values. In these arrays there is an axis for each parameter. If this same approach is used for the SC Grid it would end up with many black spaces and would be confusing and cumbersome.
+Therefore, the method that [Self Consistent Grid fit](/SCgrid_fit_JY.py) must differ from the Planet Specific Grid fit program. In PS Grid fit, arrays are initilised before the loop runs for storing the data and $\chi^2$ values. In these arrays there is an axis for each parameter. If this same approach is used for the SC Grid it would end up with many blank spaces and would be confusing and cumbersome.
 
 Instead, [Self Consistent Grid fit](/SCgrid_fit_JY.py) determines $\chi^2$ as it iterates through the files for the first time and then later deals with the parameters from the model filenames. This is an overview of the approach:
 
