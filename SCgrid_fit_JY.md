@@ -1,5 +1,7 @@
 
-# Changes from Planet Specific
+# Self Consistent Grid Fit | Jude Young
+
+This code fits simulated transit events to observations to try and guess atmosphere composition.
 
 ## Main Change: Grid Organisation
 
